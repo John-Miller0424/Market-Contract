@@ -1,0 +1,15 @@
+{
+  "name": "market-contract",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "hardhat test"
+  },
+  "devDependencies": {
+    "hardhat": "^2.22.2",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-etherscan": "^3.0.3",
+    "ethers": "^5.7.2",
+    "dotenv": "^16.4.5"
+  }
+}
