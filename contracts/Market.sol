@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 contract Market {
-    // ----------- ROLES ----------
+    
     address public owner;
 
     constructor(address _owner) {
@@ -19,7 +19,7 @@ contract Market {
         _;
     }
 
-    // ----------- SELLER MANAGEMENT ----------
+    // Owner Part
     mapping(address => bool) public isSeller;
     address[] private sellerList;
 
@@ -32,7 +32,6 @@ contract Market {
 
         isSeller[seller] = true;
 
-        // avoid duplicate sellers in sellerList
         bool exists = false;
         for (uint i = 0; i < sellerList.length; i++) {
             if (sellerList[i] == seller) {
@@ -50,7 +49,6 @@ contract Market {
 
         isSeller[seller] = false;
 
-        // deactivate all their products
         uint[] storage ids = sellerProducts[seller];
         for (uint i = 0; i < ids.length; i++) {
             uint id = ids[i];
@@ -80,7 +78,7 @@ contract Market {
         return active;
     }
 
-    // ----------- PRODUCT SYSTEM WITH ESCROW ----------
+    // Seller Part
     enum ProductStatus { Active, Sold, Completed, Refunded }
 
     struct Product {
@@ -100,11 +98,7 @@ contract Market {
     event ProductAdded(uint id, address seller, string name, uint price);
     event ProductRemoved(uint id, address seller);
 
-    // add new product
-    function addProduct(string calldata name, uint priceWei)
-        external
-        onlySeller
-    {
+    function addProduct(string calldata name, uint priceWei) external onlySeller {
         require(priceWei > 0, "Price must be > 0");
 
         nextProductId++;
@@ -134,11 +128,7 @@ contract Market {
         emit ProductRemoved(productId, msg.sender);
     }
 
-    function getSellerProducts(address seller)
-        external
-        view
-        returns (Product[] memory)
-    {
+    function getSellerProducts(address seller) external view returns (Product[] memory) {
         uint[] storage ids = sellerProducts[seller];
 
         uint count;
@@ -175,7 +165,7 @@ contract Market {
         return list;
     }
 
-    // ----------- ESCROW SYSTEM ----------
+    // Buyer Part
     struct Escrow {
         address buyer;
         uint amount;
@@ -189,7 +179,6 @@ contract Market {
     event EscrowReleased(uint id);
     event EscrowRefunded(uint id);
 
-    // BUY PRODUCT (freeze money)
     function buyProduct(uint productId) external payable {
         Product storage p = products[productId];
 
@@ -197,7 +186,6 @@ contract Market {
         require(p.status == ProductStatus.Active, "Already sold");
         require(msg.value == p.price, "Incorrect price");
 
-        // freeze money
         escrows[productId] = Escrow({
             buyer: msg.sender,
             amount: msg.value,
@@ -211,7 +199,6 @@ contract Market {
         emit ProductPurchased(productId, p.seller, msg.sender, p.price);
     }
 
-    // BUYER CONFIRMS DELIVERY → release funds to seller
     function confirmReceived(uint productId) external {
         Escrow storage e = escrows[productId];
         Product storage p = products[productId];
@@ -230,15 +217,6 @@ contract Market {
         emit EscrowReleased(productId);
     }
 
-    // BUYER CLAIMS A PROBLEM (dispute)
-    function openDispute(uint productId) external {
-        Escrow storage e = escrows[productId];
-        require(e.exists, "No escrow");
-        require(e.buyer == msg.sender, "Not buyer");
-        // freeze but do nothing yet, admin must resolve
-    }
-
-    // ADMIN resolves dispute → refund buyer OR pay seller
     function resolveDispute(uint productId, bool refundBuyer) external onlyOwner {
         Escrow storage e = escrows[productId];
         Product storage p = products[productId];
@@ -259,12 +237,7 @@ contract Market {
         else emit EscrowReleased(productId);
     }
 
-    // BUYER CAN SEE PURCHASE HISTORY
-    function getMyPurchases()
-        external
-        view
-        returns (Product[] memory)
-    {
+    function getMyPurchases() external view returns (Product[] memory) {
         uint[] storage ids = buyerPurchases[msg.sender];
         Product[] memory list = new Product[](ids.length);
 
